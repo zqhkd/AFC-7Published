@@ -1,0 +1,24 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "AFC-7 A35 一键调试",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/${workspaceFolderBasename}",
+            "stopAtEntry": true,
+            "cwd": "${workspaceFolder}",
+            "MIMode": "gdb",
+            "miDebuggerPath": "/usr/bin/gdb-multiarch",
+            "miDebuggerServerAddress": "192.168.0.10:1234",
+            "targetArchitecture": "arm64",
+            "preLaunchTask": "4. Start GDB Server (For Debug)",
+            "setupCommands": [
+                { "text": "-enable-pretty-printing", "ignoreFailures": true },
+                { "text": "set architecture aarch64", "ignoreFailures": false },
+                { "text": "set sysroot .", "ignoreFailures": true },
+                { "text": "set auto-solib-add off", "ignoreFailures": true }
+            ]
+        }
+    ]
+}

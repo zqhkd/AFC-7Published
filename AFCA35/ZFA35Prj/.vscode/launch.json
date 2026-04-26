@@ -1,0 +1,32 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "AFC-7 A35 一键调试",
+            "type": "cppdbg",
+            "request": "launch",
+            // 🚨 修正 1：执行文件必须去 build 目录下找
+            "program": "${workspaceFolder}/build/${workspaceFolderBasename}",
+            "stopAtEntry": false, 
+            "cwd": "${workspaceFolder}",
+            "MIMode": "gdb",
+            
+            // 🚨 修正 2：强制 VS Code 识别 ARM64 架构，消灭解析乱码报错
+            "targetArchitecture": "arm64",
+            
+            // 🚨 修正 3：全面接入系统环境变量
+            "miDebuggerPath": "${env:ST_MP2_SDK_PATH}/sysroots/x86_64-ostl_sdk-linux/usr/bin/aarch64-ostl-linux/aarch64-ostl-linux-gdb",
+            "miDebuggerServerAddress": "${env:AFC7_BOARD_IP}:1234",
+            "preLaunchTask": "4. Start GDB Server (For Debug)",
+            "setupCommands": [
+                { "text": "-enable-pretty-printing", "ignoreFailures": true },
+                { "text": "set sysroot ${env:ST_MP2_SDK_PATH}/sysroots/cortexa35-ostl-linux" },
+                { "text": "set auto-solib-add off", "ignoreFailures": true },
+                { "text": "tbreak main", "ignoreFailures": true }
+            ],
+            "sourceFileMap": {
+                "${workspaceFolder}": "${workspaceFolder}"
+            }
+        }
+    ]
+}

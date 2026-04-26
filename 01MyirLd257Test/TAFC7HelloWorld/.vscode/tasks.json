@@ -1,0 +1,36 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "1. Pure Build (Local WSL2)",
+            "type": "shell",
+            // 🚨 极致简化：系统里已经有变量了，直接 make all 即可
+            "command": "make all",
+            "group": "build",
+            "problemMatcher": ["$gcc"]
+        },
+        {
+            "label": "2. Deploy & Run (Fast)",
+            "type": "shell",
+            // 🚨 全面使用 ${env:VAR} 替换 config
+            "command": "cd ${workspaceFolder} && ssh ${env:AFC7_BOARD_USER}@${env:AFC7_BOARD_IP} 'killall -9 ${workspaceFolderBasename} 2>/dev/null || true' && scp build/${workspaceFolderBasename} ${env:AFC7_BOARD_USER}@${env:AFC7_BOARD_IP}:~/ && ssh ${env:AFC7_BOARD_USER}@${env:AFC7_BOARD_IP} 'chmod +x ~/${workspaceFolderBasename} && ~/${workspaceFolderBasename}'",
+            "group": "build", 
+            "problemMatcher": []
+        },
+        {
+            "label": "3. Build, Deploy & Run (Full Step)",
+            "type": "shell",
+            "command": "make all && ssh ${env:AFC7_BOARD_USER}@${env:AFC7_BOARD_IP} 'killall -9 ${workspaceFolderBasename} 2>/dev/null || true' && scp build/${workspaceFolderBasename} ${env:AFC7_BOARD_USER}@${env:AFC7_BOARD_IP}:~/ && ssh ${env:AFC7_BOARD_USER}@${env:AFC7_BOARD_IP} 'chmod +x ~/${workspaceFolderBasename} && ~/${workspaceFolderBasename}'",
+            "group": "build",
+            "problemMatcher": ["$gcc"]
+        },
+        {
+            "label": "4. Start GDB Server (For Debug)",
+            "type": "shell",
+            "command": "make all && ssh ${env:AFC7_BOARD_USER}@${env:AFC7_BOARD_IP} 'killall -9 gdbserver ${workspaceFolderBasename} 2>/dev/null || true' && scp build/${workspaceFolderBasename} ${env:AFC7_BOARD_USER}@${env:AFC7_BOARD_IP}:~/ && ssh ${env:AFC7_BOARD_USER}@${env:AFC7_BOARD_IP} 'gdbserver :1234 ~/${workspaceFolderBasename} > /tmp/gdb_out.log 2>&1 &'",
+            "group": "build",
+            "presentation": { "reveal": "silent", "close": true },
+            "problemMatcher": ["$gcc"]
+        }
+    ]
+}

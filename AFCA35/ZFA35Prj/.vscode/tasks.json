@@ -1,0 +1,39 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "1. Pure Build (Local WSL2)",
+            "type": "shell",
+            // 🚨 系统环境已就绪，直接执行 make 即可
+            "command": "make all",
+            "group": "build"
+        },
+        {
+            "label": "2. Deploy & Run (Fast)",
+            "type": "shell",
+            // 🚨 核心：从 build 目录下抓取生成的文件并下发
+            "command": "ssh ${env:AFC7_BOARD_USER}@${env:AFC7_BOARD_IP} 'killall -9 ${workspaceFolderBasename} 2>/dev/null || true' && scp build/${workspaceFolderBasename} ${env:AFC7_BOARD_USER}@${env:AFC7_BOARD_IP}:~/ && ssh ${env:AFC7_BOARD_USER}@${env:AFC7_BOARD_IP} 'chmod +x ~/${workspaceFolderBasename} && ~/${workspaceFolderBasename}'",
+            "group": "build"
+        },
+        {
+            "label": "3. Build, Deploy & Run (Full Step)",
+            "type": "shell",
+            "command": "make all && ssh ${env:AFC7_BOARD_USER}@${env:AFC7_BOARD_IP} 'killall -9 ${workspaceFolderBasename} 2>/dev/null || true' && scp build/${workspaceFolderBasename} ${env:AFC7_BOARD_USER}@${env:AFC7_BOARD_IP}:~/ && ssh ${env:AFC7_BOARD_USER}@${env:AFC7_BOARD_IP} 'chmod +x ~/${workspaceFolderBasename} && ~/${workspaceFolderBasename}'",
+            "group": "build"
+        },
+        {
+            "label": "4. Start GDB Server (For Debug)",
+            "type": "shell",
+            // 🚨 终极优化：编译 -> 强制清理端口(fuser) -> 下发至板子 -> 静默挂起 gdbserver
+            "command": "make all && ssh ${env:AFC7_BOARD_USER}@${env:AFC7_BOARD_IP} 'fuser -k 1234/tcp 2>/dev/null || true' && scp build/${workspaceFolderBasename} ${env:AFC7_BOARD_USER}@${env:AFC7_BOARD_IP}:~/ && ssh ${env:AFC7_BOARD_USER}@${env:AFC7_BOARD_IP} 'gdbserver --once :1234 ~/${workspaceFolderBasename} >/dev/null 2>&1 &'",
+            
+            // 保留您精妙的后台丢弃逻辑
+            "isBackground": false, 
+            "group": "build",
+            "presentation": {
+                "reveal": "silent",
+                "close": true
+            }
+        }
+    ]
+}

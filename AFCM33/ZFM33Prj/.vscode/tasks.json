@@ -1,0 +1,45 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "1. Pure Build (Local WSL2)",
+            "type": "shell",
+            "command": "cd ${workspaceFolder} && source ~/myir_sdk/environment-setup-cortexa35-ostl-linux && make clean all",
+            "group": "build"
+        },
+        {
+            "label": "2. Deploy & Run (Fast)",
+            "type": "shell",
+            "command": "cd ${workspaceFolder} && ssh root@192.168.0.10 'killall -9 ${workspaceFolderBasename} || true' && scp ${workspaceFolderBasename} root@192.168.0.10:/home/root/ && ssh root@192.168.0.10 'chmod +x /home/root/${workspaceFolderBasename} && /home/root/${workspaceFolderBasename}'",
+            "group": "build"
+        },
+        {
+            "label": "3. Build, Deploy & Run (Full Step)",
+            "type": "shell",
+            "command": "cd ${workspaceFolder} && source ~/myir_sdk/environment-setup-cortexa35-ostl-linux && make clean all && ssh root@192.168.0.10 'killall -9 ${workspaceFolderBasename} || true' && scp ${workspaceFolderBasename} root@192.168.0.10:/home/root/ && ssh root@192.168.0.10 'chmod +x /home/root/${workspaceFolderBasename} && /home/root/${workspaceFolderBasename}'",
+            "group": "build"
+        },
+        {
+            "label": "4. Start GDB Server (For Debug)",
+            "type": "shell",
+            "command": "ssh root@192.168.0.10 'killall -9 gdbserver ${workspaceFolderBasename} || true; gdbserver :1234 /home/root/${workspaceFolderBasename}'",
+            "isBackground": true,
+            "dependsOn": ["1. Pure Build (Local WSL2)"],
+            "group": "build",
+            "problemMatcher": {
+                "background": {
+                    "activeOnStart": true,
+                    "beginsPattern": "Listening on port",
+                    "endsPattern": "Listening on port"
+                },
+                "pattern": { "regexp": "." }
+            }
+        },
+        {
+            "label": "5. Build & Run with ZFDevLib",
+            "type": "shell",
+            "command": "cd ${workspaceFolder} && if [ -d 'ZFA35DevLib' ]; then echo 'Core: Rebuilding...'; source ~/myir_sdk/environment-setup-cortexa35-ostl-linux && make -C ZFA35DevLib clean all && make clean all && ssh root@192.168.0.10 'killall -9 ${workspaceFolderBasename} || true' && scp ${workspaceFolderBasename} root@192.168.0.10:/home/root/ && ssh root@192.168.0.10 'chmod +x /home/root/${workspaceFolderBasename} && /home/root/${workspaceFolderBasename}'; else echo 'Error: Source not found.'; exit 1; fi",
+            "group": "build"
+        }
+    ]
+}

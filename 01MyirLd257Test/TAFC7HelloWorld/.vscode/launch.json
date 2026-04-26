@@ -1,0 +1,32 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "AFC-7 A35 一键调试",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/build/${workspaceFolderBasename}",
+            "stopAtEntry": false, 
+            "cwd": "${workspaceFolder}",
+            "MIMode": "gdb",
+
+            // 🚨 直接引用系统环境变量：${env:ST_MP2_SDK_PATH}
+            "miDebuggerPath": "${env:ST_MP2_SDK_PATH}/sysroots/x86_64-ostl_sdk-linux/usr/bin/aarch64-ostl-linux/aarch64-ostl-linux-gdb",
+            
+            // 🚨 IP 和 端口分离 (GDB默认通常用1234)
+            "miDebuggerServerAddress": "${env:AFC7_BOARD_IP}:${env:AFC7_BOARD_KEY}",
+            
+            "preLaunchTask": "4. Start GDB Server (For Debug)",
+            "setupCommands": [
+                { "text": "-enable-pretty-printing", "ignoreFailures": true },
+                // 🚨 Sysroot 同步环境变量
+                { "text": "set sysroot ${env:ST_MP2_SDK_PATH}/sysroots/cortexa35-ostl-linux" },
+                { "text": "set auto-solib-add off", "ignoreFailures": true },
+                { "text": "tbreak main", "ignoreFailures": true }
+            ],
+            "sourceFileMap": {
+                "${workspaceFolder}": "${workspaceFolder}"
+            }
+        }
+    ]
+}

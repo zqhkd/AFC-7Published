@@ -261,7 +261,7 @@ git push origin main --tags
 # 1. 克隆代码
 git clone git@github.com:zqhkd/AFC-7Published.git
 ```
-### 🧹7.2  容错与规范戒律
+### 🧹7.2  容错处理
 - **写乱了，想放弃本地修改，回退到远程版本**：
 ```
     git checkout -- main.c  # 放弃 main.c 的本地修改

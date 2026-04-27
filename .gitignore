@@ -1,0 +1,52 @@
+# ==========================================
+# AFC-7 项目通用 Git 忽略规则 (V2.0 架构优化版 - 防线修复)
+# ==========================================
+
+# --- 1. 核心构建产物隔离 (🚨 必须放在第1步下方实施最终击杀) ---
+# 无论谁在哪个目录下新建测试，只要 Makefile 生成 build/ 目录，都会被忽略
+**/build/
+
+# --- 2. 编译中间产物 (C/C++) ---
+*.o
+*.obj
+*.a
+*.so
+*.out
+*.elf
+*.bin
+*.map
+*.d
+*.ko
+*.mod
+*.su
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+
+# --- 3. VS Code 缓存与本地配置 ---
+.vscode/ipch/
+.vscode/browse.vc.db
+.vscode/.browse.vc.db
+*.code-workspace
+.mxproject
+*.log
+# 如果 SDK 路径在同事电脑上完全不同，可以考虑取消下面两行的注释
+# .vscode/launch.json
+# .vscode/tasks.json
+
+# --- 4. Windows / AFCApp 开发相关 (保持兼容) ---
+bin/
+obj/
+*.user
+*.suo
+*.sln.docstates
+Debug/
+Release/
+x64/
+
+# --- 5. 系统与临时文件 ---
+.DS_Store
+Thumbs.db
+*~
+*.bak
+*.tmp

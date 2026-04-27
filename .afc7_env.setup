@@ -1,0 +1,32 @@
+# ==========================================
+# AFC-7 平台全局环境变量配置
+# ==========================================
+
+# --- SDK 与项目根目录 (波浪线自适应) ---
+# ST MP2 官方交叉编译 SDK 绝对路径
+export ST_MP2_SDK_PATH="$HOME/st_mp2_sdk"
+# AFC-7开发平台 根目录
+export AFC7_SYSTEM_ROOT="$HOME/AFC-7"
+
+# --- 目标板卡硬件配置 ---
+# AFC-7 智能飞控板IP地址，用于SSH调试
+export AFC7_BOARD_IP="192.168.1.10"
+# AFC-7 智能飞控板SSH登录用户名
+export AFC7_BOARD_USER="root"
+# AFC-7 智能飞控板SSH登录用户密码
+export AFC7_BOARD_KEY="1234"
+# AFC-7 智能飞控板网络端口号
+export AFC7_BOARD_PORT="22"
+
+# --- 硬件调试与工具链参数 ---
+# M33核的ST-Link编程器VID和PID号
+export ST_LINK_VID_PID="0483:3748"
+# M33核的GDB调试器名称
+export AFC7_GDB="gdb-multiarch"
+# AFC-7远程访问路径
+export AFC7_REMOTE_PATH="/home/root"
+
+# --- OpenAMP 异构路径修补配置 (相对于项目工程根目录（如NakedAFC7）) --
+# 若未来 CubeMX 升级修复或更改了路径结构，仅需在此处修改，工程 CMake 自动生效
+export AFC7_OAMP_SYS_INC="Middlewares/Third_Party/OpenAMP/libmetal/lib/metal/system/generic"
+export AFC7_OAMP_PROC_INC="Middlewares/Third_Party/OpenAMP/libmetal/lib/metal/processor/arm"

@@ -1,0 +1,2 @@
+# 在项目根目录创建 .gitattributes 文件
+* text=auto eol=lf

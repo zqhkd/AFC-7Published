@@ -50,3 +50,6 @@ Thumbs.db
 *~
 *.bak
 *.tmp
+
+# --- 6. 庞大的 SDK 源码树隔离 ---
+AFC7-Distribution-L6.6.48-V1.0.0/

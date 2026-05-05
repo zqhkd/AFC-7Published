@@ -1,0 +1,37 @@
+// SPDX-License-Identifier: (GPL-2.0-only OR BSD-3-Clause)
+/*
+ * Copyright (C) 2026, STMicroelectronics - All Rights Reserved
+ * Author: STM32CubeMX code generation for STMicroelectronics.
+ */
+
+/* For more information on Device Tree configuration, please refer to
+ * https://wiki.st.com/stm32mpu/wiki/Category:Device_tree_configuration
+ */
+
+&rifsc {
+	st,protreg = <
+		RIFPROT(STM32MP25_RIFSC_UART7_ID, RIF_UNUSED, RIF_UNLOCK, RIF_SEC, RIF_PRIV, RIF_CID2, RIF_SEM_DIS, RIF_CFEN)
+	>;
+
+	status = "okay";
+
+	/* USER CODE BEGIN rifsc */
+	/* USER CODE END rifsc */
+};
+
+&tamp {
+	st,backup-zones = <128 0 0 0 0 0 0>;
+	status = "okay";
+};
+
+&gpiod {
+
+	st,protreg = <
+		RIFPROT(RIF_IOPORT_PIN(0), RIF_UNUSED, RIF_UNLOCK, RIF_SEC, RIF_PRIV, RIF_CID2, RIF_SEM_DIS, RIF_CFEN) /* PD0 */
+		RIFPROT(RIF_IOPORT_PIN(3), RIF_UNUSED, RIF_UNLOCK, RIF_SEC, RIF_PRIV, RIF_CID2, RIF_SEM_DIS, RIF_CFEN) /* PD3 */
+	>;
+	status = "okay";
+};
+
+/* USER CODE BEGIN addons */
+/* USER CODE END addons */

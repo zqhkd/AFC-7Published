@@ -31,15 +31,17 @@ scp issue ${TARGET_USER}@${TARGET_IP}:/etc/issue
 
 # 4. 推送硬件全景巡检脚本
 echo -e "\e[1;33m[4/5] 正在推送硬件资源巡检脚本...\e[0m"
-scp check_afc7_hw.sh ${TARGET_USER}@${TARGET_IP}:/root/
+# 使用 ~/ 代表目标用户的真实家目录
+scp check_afc7_hw.sh ${TARGET_USER}@${TARGET_IP}:~/
 
 # 5. 远程执行权限赋予与重启
 echo -e "\e[1;33m[5/5] 正在赋予执行权限并重启开发板...\e[0m"
 # 技巧：使用 ssh 远程执行多条命令，而无需手动登录
-ssh ${TARGET_USER}@${TARGET_IP} "cd /root && chmod +x check_afc7_hw.sh && sync && reboot"
+# 同样使用 cd ~ 确保在真实的家目录下赋予权限
+ssh ${TARGET_USER}@${TARGET_IP} "cd ~ && chmod +x check_afc7_hw.sh && sync && reboot"
 
 echo -e "\e[1;32m=================================================================\e[0m"
 echo -e "\e[1;32m   🎉 部署指令下发完毕！开发板正在重启，SSH 连接会断开属正常现象。\e[0m"
 echo -e "\e[1;32m   等待重启完成后，请登录MobaXterm软件或串口终端                 \e[0m"
-echo -e "\e[1;32m    运行 ./check_afc7_hw.sh 进行硬件资源权属确认。              \e[0m"
+echo -e "\e[1;32m   运行 ./check_afc7_hw.sh 进行硬件资源权属确认。                \e[0m"
 echo -e "\e[1;32m=================================================================\e[0m"

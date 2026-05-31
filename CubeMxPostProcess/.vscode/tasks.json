@@ -1,0 +1,83 @@
+{
+    "version": "2.0.0",
+    // 通过 Ctrl + Shift + B 调出编译选项
+    "tasks": [
+        {
+            "label": "0.1 Build M33 Debug Firmware",
+            "type": "shell",
+            // 🚨 显式指定 -DCMAKE_BUILD_TYPE=Debug 以激活 bkpt 宏
+            "command": "mkdir -p CM33/build && cd CM33/build && cmake -DCMAKE_TOOLCHAIN_FILE=../../gcc-arm-none-eabi.cmake -DCMAKE_BUILD_TYPE=Debug .. && make -j4",
+            "problemMatcher": ["$gcc"],
+            "presentation": { "reveal": "silent" }
+        },
+        {
+            "label": "0.2 Windows USBIPD Auto Attach",
+            "type": "shell",
+            "command": "./.vscode/autoAttachSTLink.sh", // 🚨 直接调用独立审计脚本
+            "problemMatcher": [],
+            "presentation": { 
+                "reveal": "always",
+                "panel": "shared",
+                "showReuseMessage": false,
+                "clear": true
+            }
+        },
+        /* 🚨 只需要在中间插上这一个纯粹的后台网关服务（不惊动、不修改任何生产任务） */
+        {
+            "label": "0.3 Auto Launch OpenOCD Gateway",
+            "type": "shell",
+            "command": "pkill -f openocd || true; ./.vscode/.afc7_openocd.sh -f interface/stlink-dap.cfg -f target/stm32mp25x.cfg -f .vscode/m33_debug.cfg",
+            "isBackground": true,
+            "problemMatcher": {
+                "pattern": [{ "regexp": ".*", "file": 1, "location": 2, "message": 3 }],
+                "background": {
+                    "activeOnStart": true,
+                    "beginsPattern": ".*Open On-Chip Debugger.*",
+                    "endsPattern": ".*Listening on port 3334 for gdb connections.*" // ◄── 睁眼拦截线
+                }
+            },
+            "dependsOn": [ "0.2 Windows USBIPD Auto Attach" ],
+            "presentation": { "reveal": "always", "panel": "shared" }
+        },
+        {
+            "label": "1. Build M33 Firmware (Release)",
+            "type": "shell",
+            // 🚨 显式指定 -DCMAKE_BUILD_TYPE=Release 以禁用 bkpt 宏，用于连续运行
+            "command": "mkdir -p CM33/build && cd CM33/build && cmake -DCMAKE_TOOLCHAIN_FILE=../../gcc-arm-none-eabi.cmake -DCMAKE_BUILD_TYPE=Release .. && make -j4",
+            "group": "build",
+            "problemMatcher": ["$gcc"],
+            "presentation": { "reveal": "always" }
+        },
+        {
+            "label": "2. Awaken M33 Hardware (Linux-as-BIOS)",
+            "type": "shell",
+            "command": "scp ${workspaceFolder}/CM33/build/${workspaceFolderBasename}.elf ${env:AFC7_BOARD_USER}@${env:AFC7_BOARD_IP}:/lib/firmware/ && ssh ${env:AFC7_BOARD_USER}@${env:AFC7_BOARD_IP} 'echo stop > /sys/class/remoteproc/remoteproc0/state 2>/dev/null || true; echo ${workspaceFolderBasename}.elf > /sys/class/remoteproc/remoteproc0/firmware; echo start > /sys/class/remoteproc/remoteproc0/state; sleep 2' && echo \"✅ 下载并唤醒成功！\"",
+            "group": "build",
+            "problemMatcher": [],
+            "presentation": { "reveal": "always" }  // 改成 always 让终端自动弹出
+        },
+        {
+            "label": "3. Auto-Prepare for Debug",
+            "dependsOn": [
+                "0.1 Build M33 Debug Firmware", // 🚨 调试流程依赖任务 0 (Debug)
+                "0.2 Windows USBIPD Auto Attach",
+                // "0.3 Auto Launch OpenOCD Gateway", // ◄── 🚨 妙手回春插在此处，死死卡住后面的任务 2！
+                "2. Awaken M33 Hardware (Linux-as-BIOS)"
+            ],
+            "dependsOrder": "sequence",
+            "group": "build"
+        },
+        {
+            "label": "4. 反向同步代码 WSL → Win11",
+            "type": "shell",
+            "command": "${env:AFC7_SYSTEM_ROOT}/CubeMxPostProcess/syncWsl2WinAFC7.sh \"${workspaceFolderBasename}\"",
+            "problemMatcher": [],
+            "group": "build",
+            "presentation": {
+                "reveal": "always",
+                "panel": "shared",
+                "clear": true
+            }
+        }        
+    ]
+}

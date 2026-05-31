@@ -1,0 +1,36 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "M33 极速调试 (还原测试)",
+            "type": "cortex-debug",
+            "request": "launch",
+            "runToEntryPoint": "Reset_Handler", // 🚨 关键：改为断在汇编启动处
+            "servertype": "openocd",
+            "cwd": "${workspaceFolder}",
+            "executable": "${workspaceFolder}/CM33/build/${workspaceFolderBasename}.elf",
+            "device": "STM32MP257",
+            "targetArchitecture": "arm", 
+            "gdbPath": "${env:AFC7_GDB}",
+            "objdumpPath": "arm-none-eabi-objdump",
+            "nmPath": "arm-none-eabi-nm",
+            "serverpath": "${workspaceFolder}/.vscode/.afc7_openocd.sh",
+            "tclPort": 50020,
+            "telnetPort": 50021,
+            "configFiles": [
+                "interface/stlink-dap.cfg",
+                "target/stm32mp25x.cfg",
+                "${workspaceFolder}/.vscode/m33_debug.cfg"
+            ],
+            "preLaunchTask": "3. Auto-Prepare for Debug", 
+            "svdFile": "${workspaceFolder}/stm32mp25_cm33.svd",
+            "overrideLaunchCommands": [
+                "monitor reset halt", // 🚨 强行复位并停止
+                "monitor halt"
+            ],
+            "overrideRestartCommands": [
+                "monitor halt"
+            ]
+        }
+    ]
+}

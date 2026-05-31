@@ -1,0 +1,163 @@
+// SPDX-License-Identifier: (GPL-2.0-only OR BSD-3-Clause)
+ /******************** (C) COPYRIGHT 2026 AFC Tech Co.*************************
+ * 作    者  ： 曾庆华
+ * 文 件 名  ： AFC-7设备树定义文件
+ * 版    本  ： V1.0.260508（基于Linux6.6.48）
+ * 描    述  ： 基于米尔开发板的设备树myb-stm32mp257x-2GB.dts文件改造
+ * 官    网  ： www.acecreator.com
+ * 淘    宝  ： acecreator.taobao.com
+ * 公 众 号  ： 飞行控制与仿真
+*****************************************************************************/
+
+/dts-v1/;
+
+#define		LVDS_7INCH_PANEL		0
+#define		ETH_SWITCH_ENABLE  		0
+
+#include "myb-stm32mp257x-base.dtsi"
+#include "myb-stm32mp257x-2GB-resmem.dtsi"
+#include "myb-stm32mp257x-ethswitch.dtsi"
+
+/ {
+    model = "AFC-7 Flight Controller based on MYiR STM32MP257x"; // <--- 此处不能更改，文件系统里藏着厂商自己写的开机初始化脚本。
+//	model = "MYiR STM32MP257x Evaluation Board 2";
+    compatible = "myir,myb-stm32mp257x", "st,stm32mp257f-ev1", "st,stm32mp257";
+
+	chosen {
+		stdout-path = "serial0:115200n8";
+	};
+
+	memory@80000000 {
+		device_type = "memory";
+		reg = <0x0 0x80000000 0x0 0x80000000>;
+	};
+
+};
+
+    /* ========================================================================== */
+    /* 第三部分：M33 资源隔离与冲突防御（最关键的一步！）                           */
+    /* ========================================================================== */
+    /* 
+    * 这一步CubeMX 不会帮你生成，因为它是"减法"。
+    *   具体方法是：仔细查找在 myb-stm32mp257x-base.dtsi 中被设定为 status = "okay"，但在 AFC-7 的 A35 侧并不需要的设备，
+    *              且又必须把它分配给 M33 的所有外设。将它们显式写为 "disabled"，以覆盖米尔 base.dtsi 可能存在的默认开启状态。
+    */
+    /* 1. 干掉原厂的大件设备（防引脚乱跳）
+    * 因为它们可能复用了AFC-7智能飞控板的 M33 引脚 */
+
+    /* ========================================================================== */
+    /* 添加部分：M33 资源隔离与冲突防御（基于 Golden 固件的末尾覆盖法）             */
+    /* ========================================================================== */
+
+    // 禁用hdmi等，以下内容于20260524依据“AFC-7 飞控 STM32MP257 硬件资源梳理→设备树裁剪→OPTEE-RIF 授权 完整工作闭环操作手册”方法添加
+    &hdmi { status = "disabled";  };
+    &imx335_2v9 { status = "disabled"; };
+    &imx335_1v8 { status = "disabled"; };
+    &imx335_1v2 { status = "disabled"; };
+
+   // 禁用蓝牙和wifi，以下内容于20260524依据“AFC-7 飞控 STM32MP257 硬件资源梳理→设备树裁剪→OPTEE-RIF 授权 完整工作闭环操作手册”方法添加
+    &reg_bt_3V3 { status = "disabled"; }; // 禁用蓝牙
+    &panel_lvds { status = "disabled"; };
+    &panel_dsi_backlight { status = "disabled";  };   
+
+    /* 1. 干掉原厂的大件设备 */
+    &ltdc { status = "disabled"; };
+    &lvds { status = "disabled"; };
+    &dsi  { status = "disabled"; };
+
+    &panel_lvds_backlight { status = "disabled"; };
+
+    &i2s1 { status = "disabled"; };
+    &i2s3 { status = "disabled"; };
+    &spi7 { status = "disabled"; };
+
+    /* 覆盖没有 Label 的音频节点 */
+    / {
+        HDMI-Sound { status = "disabled"; };
+        ES8388-Sound { status = "disabled"; };
+    };
+
+    /* USER CODE: AFC-7 Hardware Tailoring */
+    &i2c2 {
+        status = "disabled";            /* 属性优先 */
+        
+        /* * 警告：为了防止 base.dtsi 中的 phandle 悬空报错，
+         * 请千万不要在这里使用 /delete-node/ 指令。
+         * 保持原厂节点壳子存在，仅将其各自在 A35 侧彻底关闭。
+         */
+        eeprom@50 {
+            status = "disabled";
+        };
+
+        es8328@10 {
+            status = "disabled";        /* 维持 es8328_codec 标签存在，但关闭驱动 */
+            port {
+                port@0 {
+                    endpoint {
+                        status = "disabled"; /* 维持 es8328_endpoint 标签存在，关闭链接 */
+                    };
+                };
+            };
+        };
+    };
+
+    /* 统一在根节点路径下将音频总驱动设为 disabled */
+    / {
+        HDMI-Sound { 
+            status = "disabled"; 
+        };
+        ES8388-Sound { 
+            status = "disabled";        /* 此时引用空壳 es8328_codec，不报错且能完美关闭 */
+        };
+        sound { 
+            status = "disabled"; 
+        };
+    };
+
+    /* 2. 未使用的存储与通讯接口 */
+    &sdmmc1 { status = "disabled"; };
+    &sdmmc3 { status = "disabled"; };
+
+    /*  I2C资源禁用：
+        *    硬件定调：I2C2 (EEPROM) 必须留给 A35/Linux。
+        *             I2C7 (PMIC) 被底层安全固件独占，I2C8 为摄像头(Linux端)。
+        *    因此：I2C1, I2C3 (以及 4,5,6) 属于安全释放区，可以放心 disabled 移交给 M33。	
+    */
+    &i2c1 { status = "disabled"; };
+    &i2c3 { status = "disabled"; };
+    /* 备用：如果 M33 还需要更多 I2C，可以随时解开以下注释 */
+    /* &i2c4 { status = "disabled"; }; */
+    /* &i2c5 { status = "disabled"; }; */
+    /* &i2c6 { status = "disabled"; }; */
+
+    &spi1 { status = "disabled"; };
+    &spi4 { status = "disabled"; };
+    &m_can1 { status = "disabled"; };
+    &m_can2 { status = "disabled"; };
+
+    /* 3. 释放不需要的串口 */
+    &usart1 { status = "disabled"; };
+    /* &usart2 { status = "disabled"; }; */
+    &usart3 { status = "disabled"; };
+    &uart4 { status = "disabled"; };
+    &uart5 { status = "disabled"; };
+    &usart6 { status = "disabled"; };
+    &uart8 { status = "disabled"; };
+    &uart9 { status = "disabled"; };
+
+    /* 4. 释放 PWM 与 PPM 控制权 */
+    &timers1 { status = "disabled"; };
+    &timers2 { status = "disabled"; };
+    &timers8 { status = "disabled"; };
+    &timers5 { status = "disabled"; };
+
+    /* 5. 释放 ADC 给 M33 */
+    &adc1 { status = "disabled"; };
+    &adc2 { status = "disabled"; };
+
+    /* ========================================================================== */
+    /* 第四部分：拔除 A35 侧的 gpio-leds 大盒子，将引脚绝对割让给 M33                 */
+    /* ========================================================================== */
+    
+/* 直接用 /delete-node/ 编译器最高优先级强拆指令，干掉整个 leds 总盒子 */
+/delete-node/ &{/gpio-leds};

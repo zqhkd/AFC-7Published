@@ -82,6 +82,13 @@
 	/* USER CODE END pinctrl_z */
 };
 
+&bsec {
+	status = "okay";
+
+	/* USER CODE BEGIN bsec */
+	/* USER CODE END bsec */
+};
+
 &ddr {
 	status = "okay";
 

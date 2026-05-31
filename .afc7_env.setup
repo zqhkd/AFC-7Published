@@ -7,6 +7,10 @@
 export ST_MP2_SDK_PATH="$HOME/st_mp2_sdk"
 # AFC-7开发平台 根目录
 export AFC7_SYSTEM_ROOT="$HOME/AFC-7"
+# AFC-7开发平台WSL2终端登录用户名
+export AFC7_WSL_USER="zqhkd"
+# AFC-7开发平台WSL2终端登录密码
+export AFC7_WSL_KEY="3.1415926"
 
 # --- 目标板卡硬件配置 ---
 # AFC-7 智能飞控板IP地址，用于SSH调试

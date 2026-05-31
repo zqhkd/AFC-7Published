@@ -1,0 +1,14 @@
+{
+    "configurations": [
+        {
+            "name": "WSL-GCC-ARM",
+            // 🚨 路径纠正：CMake 在子目录 build 下生成的 json
+            "compileCommands": "${workspaceFolder}/CM33/build/compile_commands.json",
+            "compilerPath": "/usr/bin/arm-none-eabi-gcc",
+            "cStandard": "c11",
+            "cppStandard": "c++14",
+            "intelliSenseMode": "linux-gcc-arm"
+        }
+    ],
+    "version": 4
+}

@@ -1,0 +1,18 @@
+{
+    "C_Cpp.errorSquiggles": "disabled",
+
+    // 关闭自动 configure
+    "cmake.configureOnOpen": false,
+    "cmake.configureOnEdit": false,
+    "cmake.automaticReconfigure": false,
+
+    // 关键：日志级别设为 error，只报错，不输出 info
+    "cmake.loggingLevel": "error",
+
+    // 关键：永远不自动弹出 CMake 输出面板
+    "cmake.revealLog": "never",
+    "cmake.openOutputOnConfigure": false,
+
+    // 不显示 Presets 相关通知
+    "cmake.showOptionsMovedNotification": false
+}

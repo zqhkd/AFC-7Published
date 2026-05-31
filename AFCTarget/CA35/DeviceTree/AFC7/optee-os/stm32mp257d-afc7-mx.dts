@@ -58,6 +58,13 @@
 	/* USER CODE END pinctrl_z */
 };
 
+&bsec {
+	status = "okay";
+
+	/* USER CODE BEGIN bsec */
+	/* USER CODE END bsec */
+};
+
 &hpdma1 {
 	status = "okay";
 
@@ -86,6 +93,15 @@
 
 	/* USER CODE BEGIN i2c7 */
 	/* USER CODE END i2c7 */
+};
+
+&m33_rproc {
+	status = "okay";
+	mboxes = <&ipcc1 0x100>, <&ipcc1 0x101>, <&ipcc1 2>;
+	mbox-names = "vq0", "vq1", "shutdown";
+
+	/* USER CODE BEGIN m33_rproc */
+	/* USER CODE END m33_rproc */
 };
 
 &rcc {

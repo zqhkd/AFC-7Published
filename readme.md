@@ -63,7 +63,7 @@ chmod +x myir-image-full-openstlinux-weston-myd-ld25x.rootfs-x86_64-toolchain-5.
 > **🚨 架构红线警告：指定部署路径** 当安装程序询问 `Enter target directory for SDK (default: /opt/st/...)` 时，**切勿使用默认路径**！ 请务必手动输入并回车：`~/st_mp2_sdk` (或绝对路径 `/home/zqhkd/st_mp2_sdk`)。 若用户自定义了其他路径，后续必须在 `~/.afc7_env` 文件中同步更新 `ST_MP2_SDK_PATH`。
 
 3. **确证地基**：安装完成后，执行以下指令。若未报错且文件存在，则 SDK 释放成功： `ls ~/st_mp2_sdk/environment-setup-cortexa35-ostl-linux`
-### 1.4 环境配置标准化与自动化链路预设
+### 1.4 环境配置标准化与自动化链路预设（这个文件是本地上位机wsl2侧的文件哦）
 1. **分离式环境变量部署 (SSoT)**： 用户须将项目仓库中的环境模板拷贝至个人家目录：   
 ```Bash
     cp ~/AFC-7/.afc7_env.setup ~/.afc7_env

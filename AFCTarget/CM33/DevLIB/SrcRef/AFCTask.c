@@ -108,7 +108,7 @@ SSaveParamFlash debugDefaultPara(void)
  	  return pSUavDefaultPara;
 }
 
-void initAFCPara(void)
+void initAFCUavPara(void)
 {
 #ifdef __LOCAL_DEBUG_VER__
 	  g_UavFcsParam = debugDefaultPara();
@@ -525,41 +525,34 @@ void MainProc(void)
 // 任务初始化模块
 void AFCTaskInit(void)
 {
-   InitDWT();  // 采用硬件精确延时Nus方案，初始化
-#ifndef __CONNECTED_IO__
-  // FM25V01中保存参数加载	
-	 initAFCPara();
+	InitDWT();  // 采用硬件精确延时Nus方案，初始化
 
-// 系统参数初始化
-	 vSysParamInit();
-// 任务调度用的计数参数初始化
-	 vInitRealTaskParameter();
-//	仅打开任务定时器htim12中断, TIM6/13/14在任务调度模块初始化中处理，生成相关任务，则打开否则不打开
-//		HAL_TIM_Base_Start_IT(&htim12);
-// GPS、MEMS等的初始化测试以最后用户模型设置为准。
-// 初始化Simulink算法模型。GPS、MEMS等的初始化测试以最后用户模型设置为准。
-	 InitializeModel();
+	// 初始化无人机配置参数，包括无人机所用电路板、机架类型、传感器标校参数等，参数来源于A35保存的上次参数或默认值
+	initAFCUavPara();
 
-   initSysChipIdValid();
+	// 系统参数初始化
+	vSysParamInit();
+	
+	// 任务调度用的计数参数初始化
+	vInitRealTaskParameter();
+	//	仅打开任务定时器htim12中断, TIM6/13/14在任务调度模块初始化中处理，生成相关任务，则打开否则不打开
+	//		HAL_TIM_Base_Start_IT(&htim12);
+	// GPS、MEMS等的初始化测试以最后用户模型设置为准。
+	// 初始化Simulink算法模型。GPS、MEMS等的初始化测试以最后用户模型设置为准。
+	InitializeModel();
 
-// 当使用BasicAC算法库时，初始化DtCom控制参数，这些参数是完全与BasicAC库配套的，如果不使用此库或此库控制系统结构有调整则  V5.03.240229
-	 if(g_bUsedOfAFCBasicAC) initDtComCtrlPara();
+	initSysChipIdValid();
 
-	 initGs2FcsCmdFrame();
+	// 当使用BasicAC算法库时，初始化DtCom控制参数，这些参数是完全与BasicAC库配套的，如果不使用此库或此库控制系统结构有调整则  V5.03.240229
+	if(g_bUsedOfAFCBasicAC) initDtComCtrlPara();
 
-	 initTask0Period();
-// 等待自检完成，特别是电调约在2s后听到正常“滴滴....滴”声音后才正常		
-			 	// 等待系统自检完成
-	 HAL_Delay(3000);
+	initGs2FcsCmdFrame();
+
+	initTask0Period();
+	// 等待自检完成，特别是电调约在2s后听到正常“滴滴....滴”声音后才正常		
+			// 等待系统自检完成
+	HAL_Delay(3000);
 	// 初始化完成，清零超时故障监测标志	
-	 g_sRealTimeCount.err_flag = 0;
-#else
-		// 系统参数初始化
-			 vSysParamInit();
-		// 任务调度用的计数参数初始化
-			 vInitRealTaskParameter();
-	 // CIO仿真初始化
-			 ConnectedIOInit();
-#endif
+	g_sRealTimeCount.err_flag = 0;
 }
 /************************ (C) COPYRIGHT ACG co. *****END OF FILE****/

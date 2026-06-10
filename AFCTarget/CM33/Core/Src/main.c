@@ -35,8 +35,15 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "stm32mp2xx.h"
-#include "myir_board_defs.h"
+// #include "myir_board_defs.h"
 // #include "openamp.h"
+
+#define __GLOBAL_VAR_FIRST_USE__
+#include "AFCGlobalVar.h"
+#undef  __GLOBAL_VAR_FIRST_USE__
+
+#include "AFCTask.h"
+
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -57,9 +64,7 @@
 /* Private variables ---------------------------------------------------------*/
 
 /* USER CODE BEGIN PV */
-uint8_t aRxBuffer;           // 中断接收专用单字节缓冲区
-uint8_t g_main_rx_buf[256];  // 主循环处理缓冲区
-uint16_t g_main_rx_idx = 0;  // 缓冲区当前长度
+
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -68,30 +73,8 @@ void MX_FREERTOS_Init(void);
 /* USER CODE BEGIN PFP */
 // AFC-7飞控板的时钟合闸函数实现
 void AFC7_Hardware_Clock_Gating_On(void);
-// IPCC 硬件通道状态强行复位
-void AFC7_Trigger_System_Hot_Reset();
 /* 定义最可靠的串口发送函数，避免 printf 卡死 */
-void My_UART_Send(char *str)
-{
-  HAL_UART_Transmit(&huart5, (uint8_t*)str, strlen(str), 100);
-}
 
-void dispAFC7StartInf(void)
-{
-  My_UART_Send("\r\n");
-  My_UART_Send("========================================\r\n");
-  My_UART_Send("   [AFC-7] Flight Controller Board\r\n");
-  My_UART_Send("========================================\r\n");
-  My_UART_Send("[STATUS] Initialization completed!\r\n");
-  My_UART_Send("\r\n");
-  My_UART_Send("--- Test Tasks Running ---\r\n");
-  My_UART_Send("  [1] Heartbeat via UART  : 2s interval\r\n");
-  My_UART_Send("  [2] Blue LED flashing   : 5s interval\r\n");
-  My_UART_Send("  [3] Character echo mode : Ready\r\n");
-  My_UART_Send("\r\n");
-  My_UART_Send("[AFC-7] System is ready. Type any character to echo...\r\n");
-  My_UART_Send("========================================\r\n");
-}
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -172,20 +155,8 @@ int main(void)
   MX_UART7_Init();
   /* USER CODE BEGIN 2 */
 
-  // 显示初始化完成和测试任务启动信息
-  dispAFC7StartInf();
-
-  /* 🚨 重新初始化 TIM6：让 HAL 库根据真实的频率，重新计算 TIM6 的分频器 🚨 */
-  HAL_InitTick(TICK_INT_PRIORITY);
-
-/* 开启 UART5 的 RXNE（接收寄存器非空）中断，不经过 HAL 状态机包装 */
-  __HAL_UART_ENABLE_IT(&huart5, UART_IT_RXNE);
-  /* 开启 错误中断 (Error IT)，为了在万一溢出时能自动清空标志位 */
-  __HAL_UART_ENABLE_IT(&huart5, UART_IT_ERR);
-
-  /* 🚨 架构级修复：必须打通外设到内核的 NVIC 优先级控制通道 🚨 */
-  HAL_NVIC_SetPriority(UART5_IRQn, 5, 0); /* 优先级需适配 FreeRTOS 设定的受控范围 */
-  HAL_NVIC_EnableIRQ(UART5_IRQn);
+  // 🚨 执行算法自检状态机加载、离散控制模型初始状态初值加载
+  AFCTaskInit();
   /* USER CODE END 2 */
 
   /* Init scheduler */
@@ -202,7 +173,7 @@ int main(void)
   while (1)  // 永远不会执行到这里
   {
     /* USER CODE END WHILE */
-
+    MainProc();
     /* USER CODE BEGIN 3 */
   }
   /* USER CODE END 3 */

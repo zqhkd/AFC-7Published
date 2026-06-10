@@ -51,7 +51,7 @@ ssh ${TARGET_USER}@${TARGET_IP} "systemctl disable eeprom-pnsn.service && system
 
 # 6. 安全推送底层 FIP 固件映像
 echo -e "\e[1;33m[6/7] 正在向暂存区推送 FIP 核心固件 (打通 M33 侧 HPDMA 越界访问权限)...\e[0m"
-scp fip-myb-stm32mp257x-2GB-optee-emmc.bin ${TARGET_USER}@${TARGET_IP}:/home/root/
+scp fip-myb-stm32mp257x-2GB-optee-emmc.setup ${TARGET_USER}@${TARGET_IP}:/home/root/fip-myb-stm32mp257x-2GB-optee-emmc.bin
 if [ $? -ne 0 ]; then echo -e "\e[1;31m[-] FIP 固件映像文件传输失败，中止后续写入！\e[0m"; exit 1; fi
 
 # 7. 闭环执行原子强刷指令 (核心机制)

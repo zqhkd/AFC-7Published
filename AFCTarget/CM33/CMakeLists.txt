@@ -63,6 +63,35 @@ target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/../Utilities/ResourcesManager
 )
 
+# ===================== 【新增：用户自定义库目录配置】 =====================
+# 1. 添加 3 个自定义目录的头文件路径（Inc）
+target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/DevLIB/Inc
+    ${CMAKE_CURRENT_SOURCE_DIR}/AlgLIB/Inc
+    ${CMAKE_CURRENT_SOURCE_DIR}/Simulink/Inc
+)
+
+# 2. 递归搜索 3 个自定义目录下的所有 .c 源文件（Src）
+file(GLOB_RECURSE USER_LIB_SOURCES
+    ${CMAKE_CURRENT_SOURCE_DIR}/DevLIB/Src/*.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/AlgLIB/Src/*.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/Simulink/Src/*.c
+)
+
+# 3. 如果有 C++ 代码，取消下面注释并添加 cpp 文件
+# file(GLOB_RECURSE USER_LIB_CPP_SOURCES
+#     ${CMAKE_CURRENT_SOURCE_DIR}/DevLIB/Src/*.cpp
+#     ${CMAKE_CURRENT_SOURCE_DIR}/AlgLIB/Src/*.cpp
+#     ${CMAKE_CURRENT_SOURCE_DIR}/Simulink/Src/*.cpp
+# )
+
+# 4. 将自定义源文件加入工程编译列表
+target_sources(${CMAKE_PROJECT_NAME} PRIVATE
+    ${USER_LIB_SOURCES}
+    # ${USER_LIB_CPP_SOURCES}  # C++ 代码启用
+)
+# ========================================================================
+
 # 确保 res_mgr.c 唯一存在于主工程中，并补齐漏掉的汇编启动文件
 set(STARTUP_FILE ${CMAKE_CURRENT_SOURCE_DIR}/Core/Startup/startup_stm32mp257dxx_m33.s)
 # 🚨 核心修复：强行按着 CMake 的头，告诉它这个小写 .s 文件必须用汇编器(ASM)编译！

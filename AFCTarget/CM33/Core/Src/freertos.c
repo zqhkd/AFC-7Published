@@ -1,20 +1,11 @@
 /* USER CODE BEGIN Header */
-/**
-  ******************************************************************************
-  * File Name          : freertos.c
-  * Description        : Code for freertos applications
-  ******************************************************************************
-  * @attention
-  *
-  * Copyright (c) 2026 STMicroelectronics.
-  * All rights reserved.
-  *
-  * This software is licensed under terms that can be found in the LICENSE file
-  * in the root directory of this software component.
-  * If no LICENSE file comes with this software, it is provided AS-IS.
-  *
-  ******************************************************************************
-  */
+/*******************************************************************************
+ * (C) COPYRIGHT 2026 ACE Tech Co.
+ * 作    者 ： 曾庆华
+ * 文 件 名 ： freertos.c
+ * 版    本 ： V7.01.260603
+ * 描    述 ： FreeRTOS 多速率子任务容器，实现默认主根任务向基频控制环的无缝升级
+ *******************************************************************************/
 /* USER CODE END Header */
 
 /* Includes ------------------------------------------------------------------*/
@@ -28,7 +19,7 @@
 /* USER CODE BEGIN Includes */
 #include "usart.h"
 #include "gpio.h"
-extern void My_UART_Send(char *str);
+#include "AFCTask.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -48,21 +39,91 @@ extern void My_UART_Send(char *str);
 
 /* Private variables ---------------------------------------------------------*/
 /* USER CODE BEGIN Variables */
-extern uint8_t aRxBuffer;           // 中断接收专用单字节缓冲区
-extern uint8_t g_main_rx_buf[256];  // 主循环处理缓冲区
-extern uint16_t g_main_rx_idx;  // 缓冲区当前长度
+/* 多速率业务任务句柄全局总线装订 */
+osThreadId_t Task01Handle = NULL;
+osThreadId_t Task02Handle = NULL;
+osThreadId_t Task03Handle = NULL;
+osThreadId_t defaultTaskHandle = NULL;
+
+// osThreadId_t TaskAirSpeedHandle; 
+
+/* 默认多率分频周期参数定义（毫秒单位） */
+uint32_t g_Task01PeriodMs = 10;
+uint32_t g_Task02PeriodMs = 20;
+uint32_t g_Task03PeriodMs = 30;
+
 /* USER CODE END Variables */
 /* Definitions for defaultTask */
 osThreadId_t defaultTaskHandle;
 const osThreadAttr_t defaultTask_attributes = {
   .name = "defaultTask",
-  .stack_size = 1024 * 4,
+  .stack_size = 4096,  // 4KB 充足栈空间防御
   .priority = (osPriority_t) osPriorityNormal,
 };
 
 /* Private function prototypes -----------------------------------------------*/
 /* USER CODE BEGIN FunctionPrototypes */
+/* 弱符号多率业务控制逻辑实体（Simulink 顶层自动编译覆盖此 3 个弱符号） */
+__weak void Task01Isr(void){}
+__weak void Task02Isr(void){}
+__weak void Task03Isr(void){}
 
+/* ==========================================================================
+ * Task01 ~ Task03 线程：标准 CMSIS-RTOS V2 多率调度
+ * ========================================================================== */
+void highThreadTask01(void *argument) {
+    (void)argument;
+    uint32_t tick = osKernelGetTickCount();
+    for(;;) {
+        tick += pdMS_TO_TICKS(g_Task01PeriodMs);
+        osDelayUntil(tick);
+        Task01Isr(); 
+    }
+}
+
+void mediumThreadTask02(void *argument) {
+    (void)argument;
+    uint32_t tick = osKernelGetTickCount();
+    for(;;) {
+        tick += pdMS_TO_TICKS(g_Task02PeriodMs);
+        osDelayUntil(tick);
+        Task02Isr(); 
+    }
+}
+
+void lowThreadTask03(void *argument) {
+    (void)argument;
+    uint32_t tick = osKernelGetTickCount();
+    for(;;) {
+        tick += pdMS_TO_TICKS(g_Task03PeriodMs);
+        osDelayUntil(tick);
+        Task03Isr(); 
+    }
+}
+
+/* 响应顶层配置的多率动态子任务装订注册模块 */
+void initTaskScheduler(uint8_t iTask01Period, uint8_t iTask02Period, uint8_t iTask03Period)
+{
+    g_Task01PeriodMs = iTask01Period; g_Task02PeriodMs = iTask02Period; g_Task03PeriodMs = iTask03Period;
+    
+    if (g_Task01PeriodMs > 0) {
+        const osThreadAttr_t t1_attr = { .name = "Task01", .priority = osPriorityHigh, .stack_size = 1024 };
+        Task01Handle = osThreadNew(highThreadTask01, NULL, &t1_attr);
+    }
+    if (g_Task02PeriodMs > 0) {
+        const osThreadAttr_t t2_attr = { .name = "Task02", .priority = osPriorityAboveNormal, .stack_size = 1024 };
+        Task02Handle = osThreadNew(mediumThreadTask02, NULL, &t2_attr);
+    }
+    if (g_Task03PeriodMs > 0) {
+        const osThreadAttr_t t3_attr = { .name = "Task03", .priority = osPriorityNormal, .stack_size = 1024 };
+        Task03Handle = osThreadNew(lowThreadTask03, NULL, &t3_attr);
+    }
+    
+    #ifdef __AFC7_ONLYM33_DEBUG_MODE__
+        const osThreadAttr_t v35_attr = { .name = "VirtA35", .priority = osPriorityBelowNormal, .stack_size = 1024 };
+        osThreadNew(Thread_Virtual_A35_Driver, NULL, &v35_attr);
+    #endif
+}
 /* USER CODE END FunctionPrototypes */
 
 void StartDefaultTask(void *argument);
@@ -119,46 +180,18 @@ void MX_FREERTOS_Init(void) {
 void StartDefaultTask(void *argument)
 {
   /* USER CODE BEGIN StartDefaultTask */
-/* 🚨 修复时钟不准：如果 5s 跑太快，说明 SystemCoreClock 变量偏小 🚨
-   * 根据米尔板 Linux 启动后的实际频率，手动校准这个全局变量 */
-/* 这里的 tick 就是基于 400MHz 修正后的精准节拍 */
-  uint32_t tick_led = osKernelGetTickCount();
-  uint32_t tick_hb = osKernelGetTickCount();
-  uint32_t seq = 0;
-  char hb_str[64];
 
-  for(;;)
-  {
-    /* 1. 检测中断缓冲区是否有数据（异步回显） */
-    if (g_main_rx_idx > 0)
-    {
-      /* 为防止打印混乱，简单加个短延时确保数据收全 */
-      osDelay(10); 
-      
-      My_UART_Send("Res: ");
-      HAL_UART_Transmit(&huart5, g_main_rx_buf, g_main_rx_idx, 100);
-      My_UART_Send("\r\n");
-      
-      g_main_rx_idx = 0; // 清空主缓冲区索引
-    }
-
-    /* 2. 严格 2s 心跳 (基于修正后的 400MHz) */
-    if ((osKernelGetTickCount() - tick_hb) >= 2000)
-    {
-      sprintf(hb_str, "[Heartbeat] Seq: %lu @ 400MHz\r\n", seq++);
-      My_UART_Send(hb_str);
-      tick_hb = osKernelGetTickCount();
-    }
-
-    /* 3. 严格 5s 闪灯 */
-    if ((osKernelGetTickCount() - tick_led) >= 3000)
-    {
-      HAL_GPIO_TogglePin(GPIOZ, GPIO_PIN_5); 
-      tick_led = osKernelGetTickCount();
-    }
+  (void)argument;
     
-    osDelay(50); // 降低任务检查频率，减少 CPU 占用，接收靠中断，所以不会丢
-  }
+    /* 1. 在这里根据加载完成的参数，动态装订派生 Task01~Task03 的线程拓扑 */
+    initTaskScheduler(g_Task01PeriodMs, g_Task02PeriodMs, g_Task03PeriodMs);
+
+    /* 2. 将自身提升至飞控最高硬实时抢占级别，杜绝被慢速网络业务挂起 */
+    osThreadSetPriority(osThreadGetId(), osPriorityRealtime);
+
+    /* 3. 🚨 闭环跳转：单向调用控制底座主循环外部死循环函数，控制权彻底移交 🚨 */
+    BaseThreadTask00(argument);
+
   /* USER CODE END StartDefaultTask */
 }
 

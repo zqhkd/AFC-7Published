@@ -1,20 +1,11 @@
 /* USER CODE BEGIN Header */
-/**
-  ******************************************************************************
-  * @file    stm32mp2xx_it.c
-  * @brief   Interrupt Service Routines.
-  ******************************************************************************
-  * @attention
-  *
-  * Copyright (c) 2026 STMicroelectronics.
-  * All rights reserved.
-  *
-  * This software is licensed under terms that can be found in the LICENSE file
-  * in the root directory of this software component.
-  * If no LICENSE file comes with this software, it is provided AS-IS.
-  *
-  ******************************************************************************
-  */
+/*******************************************************************************
+ * (C) COPYRIGHT 2026 ACE Tech Co.
+ * 作    者 ： 曾庆华
+ * 文 件 名 ： stm32mp2xx_it.c
+ * 版    本 ： V7.06.260603
+ * 描    述 ： 硬件中断服务向量表，实现 IPCC 中断入口处对外部时标的逆向整流与空间对标压栈
+ *******************************************************************************/
 /* USER CODE END Header */
 
 /* Includes ------------------------------------------------------------------*/
@@ -46,8 +37,6 @@
 
 /* Private function prototypes -----------------------------------------------*/
 /* USER CODE BEGIN PFP */
-extern uint8_t g_main_rx_buf[256];
-extern uint16_t g_main_rx_idx;
 extern UART_HandleTypeDef huart5;
 /* USER CODE END PFP */
 
@@ -460,27 +449,27 @@ void UART5_IRQHandler(void)
 {
   /* USER CODE BEGIN UART5_IRQn 0 */
   /* 1. 高速通道：检查是否是接收中断 (RXNE) */
-  if (__HAL_UART_GET_FLAG(&huart5, UART_FLAG_RXNE) != RESET)
-  {
-      /* 🚨 直接读取底层数据寄存器 (RDR)！读取动作会自动清除 RXNE 标志位 🚨 */
-      /* 全程没有加锁、没有状态判断，极速完成！ */
-      uint8_t rx_data = (uint8_t)(huart5.Instance->RDR & 0x00FF);
+  // if (__HAL_UART_GET_FLAG(&huart5, UART_FLAG_RXNE) != RESET)
+  // {
+  //     /* 🚨 直接读取底层数据寄存器 (RDR)！读取动作会自动清除 RXNE 标志位 🚨 */
+  //     /* 全程没有加锁、没有状态判断，极速完成！ */
+  //     uint8_t rx_data = (uint8_t)(huart5.Instance->RDR & 0x00FF);
       
-      if (g_main_rx_idx < 255) {
-          g_main_rx_buf[g_main_rx_idx++] = rx_data;
-      }
-      return; /* 直接返回，不用再往下走臃肿的 HAL_UART_IRQHandler */
-  }
+  //     if (g_main_rx_idx < 255) {
+  //         g_main_rx_buf[g_main_rx_idx++] = rx_data;
+  //     }
+  //     return; /* 直接返回，不用再往下走臃肿的 HAL_UART_IRQHandler */
+  // }
 
-  /* 2. 防护通道：如果是溢出错误 (ORE) 导致的中断，强力清除 */
-  if (__HAL_UART_GET_FLAG(&huart5, UART_FLAG_ORE) != RESET)
-  {
-      __HAL_UART_CLEAR_FLAG(&huart5, UART_CLEAR_OREF);
-      /* 虚拟读取一次数据，帮助清除错误状态 */
-      volatile uint32_t tmpreg = huart5.Instance->RDR;
-      (void)tmpreg;
-      return;
-  }
+  // /* 2. 防护通道：如果是溢出错误 (ORE) 导致的中断，强力清除 */
+  // if (__HAL_UART_GET_FLAG(&huart5, UART_FLAG_ORE) != RESET)
+  // {
+  //     __HAL_UART_CLEAR_FLAG(&huart5, UART_CLEAR_OREF);
+  //     /* 虚拟读取一次数据，帮助清除错误状态 */
+  //     volatile uint32_t tmpreg = huart5.Instance->RDR;
+  //     (void)tmpreg;
+  //     return;
+  // }
 
   /* USER CODE END UART5_IRQn 0 */
   HAL_UART_IRQHandler(&huart5);
@@ -623,5 +612,49 @@ void RCC_WAKEUP_IRQHandler(void)
 }
 
 /* USER CODE BEGIN 1 */
+void HAL_IPCC_RxCallback(IPCC_HandleTypeDef *hipcc, uint32_t ChannelIndex, IPCC_CHANNELDirTypeDef ChannelDir)
+{
+    (void)hipcc;
+    (void)ChannelDir;
 
+    /* 物理通道 0：仿真及外部主控指令总线核心通道 */
+    if (ChannelIndex == 0) 
+    {
+        uint64_t u64SimA35TimeUs = 0;
+        TSimSens tTmpSens;
+        
+        /* A. 空间对标：原汁原味地从共享中继区提取外部仿真机下发的传感要素数据 */
+        vReadSimDataPacket(&tTmpSens, &u64SimA35TimeUs);
+        
+        /* B. 🚨 时间对标（时轴逆向投影）：利用固定的 T0 快照线消除 ROS2 的搬运时间抖动 */
+        if (p_T0Snapshot->bIsT0Latched == 1)
+        {
+            // 相对仿真机零点的净流逝微秒增量
+            uint64_t u64DeltaRunUs = u64SimA35TimeUs - p_T0Snapshot->t0_A35_us;
+            // 刚性投影至本地控制轴：u64AlignedM33TimeUs = t0_M33 + Delta_t
+            tTmpSens.u64TimeStampUs = p_T0Snapshot->t0_M33_us + u64DeltaRunUs; 
+        }
+        else
+        {
+            tTmpSens.u64TimeStampUs = getFcsM33TimeUs(); // 时轴未合闸前的安全防御
+        }
+
+        /* C. 分流多率无锁压栈：若处于仿真模式，直接改写 M33 普通内存缓冲区实体指针，实现孪生重叠 */
+        if (bIsHilSimulationMode())
+        {
+            TIMUFrame sIMUFrame;
+            sIMUFrame.fGyroX = tTmpSens.gyro[0];
+            sIMUFrame.fGyroY = tTmpSens.gyro[1];
+            sIMUFrame.fGyroZ = tTmpSens.gyro[2];
+            sIMUFrame.fAccX  = tTmpSens.acc[0];
+            sIMUFrame.fAccY  = tTmpSens.acc[1];
+            sIMUFrame.fAccZ  = tTmpSens.acc[2];
+            sIMUFrame.u64TimeStampUs = tTmpSens.u64TimeStampUs; // 已经纯净化对标后的硬微秒戳
+            
+            /* 刚性推入 M33 本地普通内存区专属 IMU 环形缓冲区，满帧滚动循环覆盖 */
+            g_sIMURingBuffer[g_u8IMUWriteIdx] = sIMUFrame;
+            g_u8IMUWriteIdx = (g_u8IMUWriteIdx + 1) % 32; // 矩阵规划深度为 32 帧
+        }
+    }
+}
 /* USER CODE END 1 */
